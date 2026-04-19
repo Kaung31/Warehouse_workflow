@@ -9,7 +9,6 @@
     "lint": "eslint"
     "postinstall": "prisma generate"
   },
-}
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
