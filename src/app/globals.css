@@ -1,26 +1,197 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Backgrounds — dark slate, not pure black */
+  --bg:          #0d1117;
+  --bg-surface:  #161b22;
+  --bg-raised:   #1c2128;
+  --bg-hover:    #222830;
+  --bg-input:    #1c2128;
+
+  /* Borders */
+  --border:      #30363d;
+  --border-muted:#21262d;
+  --border-focus:#58a6ff;
+
+  /* Text */
+  --text:        #e6edf3;
+  --text-muted:  #8b949e;
+  --text-faint:  #484f58;
+
+  /* Accent — clean blue, easy on eyes */
+  --accent:      #58a6ff;
+  --accent-dim:  #1f6feb;
+  --accent-text: #cae8ff;
+
+  /* Semantic */
+  --green:       #3fb950;
+  --green-bg:    #0d1f12;
+  --amber:       #d29922;
+  --amber-bg:    #1f1a0d;
+  --red:         #f85149;
+  --red-bg:      #1f0d0d;
+  --blue:        #58a6ff;
+  --blue-bg:     #0d1526;
+  --purple:      #bc8cff;
+  --purple-bg:   #1a0d2e;
+
+  /* Typography */
+  --font-sans:   'Inter', system-ui, sans-serif;
+  --font-mono:   'JetBrains Mono', monospace;
+  --radius:      6px;
+  --radius-lg:   10px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:  var(--bg);
+  color:       var(--text);
+  font-family: var(--font-sans);
+  font-size:   14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
+
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-focus); }
+
+/* Monospace — for serial numbers, order numbers, barcodes */
+.mono {
+  font-family: var(--font-mono);
+  font-size:   12px;
+  letter-spacing: 0.02em;
+}
+
+/* ── Status badges ── */
+.badge {
+  display:     inline-flex;
+  align-items: center;
+  gap:         5px;
+  padding:     3px 9px;
+  border-radius: 20px;
+  font-size:   11px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  border:      1px solid transparent;
+}
+.badge::before {
+  content:       '';
+  width:         6px;
+  height:        6px;
+  border-radius: 50%;
+  background:    currentColor;
+  flex-shrink:   0;
+}
+
+/* Repair statuses */
+.badge-received   { background: var(--blue-bg);   color: #79c0ff; border-color: #1f3a5f; }
+.badge-diagnosing { background: var(--purple-bg);  color: #d2a8ff; border-color: #3d1f6e; }
+.badge-awaiting   { background: var(--amber-bg);   color: #e3b341; border-color: #5a3e00; }
+.badge-repairing  { background: #0d1a2e;           color: #58a6ff; border-color: #1f3a5f; }
+.badge-quality    { background: #0d1f1a;           color: #56d364; border-color: #1a4a2e; }
+.badge-ready      { background: var(--green-bg);   color: #3fb950; border-color: #1a4a2e; }
+.badge-dispatched { background: #0d1f12;           color: #26a641; border-color: #1a4a2e; }
+.badge-cancelled  { background: var(--red-bg);     color: #f85149; border-color: #5a1a1a; }
+
+/* Scooter statuses */
+.badge-instock    { background: var(--blue-bg);    color: #79c0ff; border-color: #1f3a5f; }
+.badge-available  { background: var(--green-bg);   color: #3fb950; border-color: #1a4a2e; }
+.badge-sold       { background: #1a1a1a;           color: #8b949e; border-color: #30363d; }
+.badge-written    { background: var(--red-bg);     color: #f85149; border-color: #5a1a1a; }
+
+/* Priority */
+.badge-urgent     { background: var(--red-bg);     color: #ff7b72; border-color: #5a1a1a; }
+.badge-high       { background: var(--amber-bg);   color: #e3b341; border-color: #5a3e00; }
+.badge-normal     { background: #161b22;           color: #8b949e; border-color: #30363d; }
+.badge-low        { background: #161b22;           color: #484f58; border-color: #21262d; }
+
+/* New workflow statuses */
+.badge-awaiting-cs   { background: var(--purple-bg);  color: #d2a8ff; border-color: #3d1f6e; }
+.badge-waiting-mech  { background: var(--blue-bg);    color: #79c0ff; border-color: #1f3a5f; }
+.badge-disputed      { background: var(--red-bg);     color: #ff7b72; border-color: #5a1a1a; }
+.badge-qc-control    { background: #0d1f1a;           color: #56d364; border-color: #1a4a2e; }
+.badge-qc-failed     { background: var(--red-bg);     color: #f85149; border-color: #5a1a1a; }
+.badge-bgrade        { background: var(--amber-bg);   color: #e3b341; border-color: #5a3e00; }
+
+/* Case type */
+.badge-warranty { background: var(--blue-bg);   color: #79c0ff; border-color: #1f3a5f; }
+.badge-bgrade-t { background: var(--amber-bg);  color: #e3b341; border-color: #5a3e00; }
+
+/* QC results */
+.badge-pass { background: var(--green-bg); color: #3fb950; border-color: #1a4a2e; }
+.badge-fail { background: var(--red-bg);   color: #f85149; border-color: #5a1a1a; }
+.badge-na   { background: #161b22;         color: #8b949e; border-color: #30363d; }
+
+/* Payment status */
+.badge-paid      { background: var(--green-bg);  color: #3fb950; border-color: #1a4a2e; }
+.badge-unpaid    { background: var(--red-bg);    color: #f85149; border-color: #5a1a1a; }
+.badge-warr-appr { background: var(--blue-bg);   color: #79c0ff; border-color: #1f3a5f; }
+
+/* ── Table ── */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  text-align:  left;
+  padding:     9px 16px;
+  font-size:   11px;
+  font-weight: 600;
+  color:       var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
+  white-space: nowrap;
+}
+.data-table td {
+  padding:       11px 16px;
+  border-bottom: 1px solid var(--border-muted);
+  color:         var(--text);
+  font-size:     13px;
+}
+.data-table tbody tr { transition: background 0.1s; }
+.data-table tbody tr:hover td { background: var(--bg-hover); cursor: pointer; }
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+/* ── Card ── */
+.card {
+  background:    var(--bg-surface);
+  border:        1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* ── Form inputs ── */
+input, select, textarea {
+  background:    var(--bg-input);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  color:         var(--text);
+  font-family:   var(--font-sans);
+  font-size:     13px;
+  padding:       8px 12px;
+  outline:       none;
+  transition:    border-color 0.15s;
+  width:         100%;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow:   0 0 0 3px rgba(88,166,255,0.1);
+}
+input::placeholder, textarea::placeholder { color: var(--text-faint); }
+label {
+  display:     block;
+  font-size:   12px;
+  font-weight: 500;
+  color:       var(--text-muted);
+  margin-bottom: 5px;
+}
+
+/* ── Page fade animation ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.18s ease forwards; }

@@ -1,0 +1,452 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  MANAGER
+  MECHANIC
+  WAREHOUSE
+  CS
+}
+
+enum ScooterStatus {
+  IN_STOCK
+  WITH_CUSTOMER
+  IN_REPAIR
+  READY_TO_SHIP
+  DISPATCHED
+  SECOND_HAND_AVAILABLE
+  SOLD
+  WRITTEN_OFF
+}
+
+enum Grade {
+  A
+  B
+  C
+}
+
+enum RepairStatus {
+  RECEIVED
+  DIAGNOSING
+  AWAITING_PARTS
+  IN_REPAIR
+  QUALITY_CHECK
+  READY_TO_SHIP
+  DISPATCHED
+  CANCELLED
+  AWAITING_CS
+  WAITING_FOR_MECHANIC
+  DISPUTED
+  QUALITY_CONTROL
+  QC_FAILED
+  BGRADE_RECORDED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum MovementReason {
+  PURCHASE_IN
+  REPAIR_CONSUMED
+  REPAIR_RETURNED
+  MANUAL_ADJUSTMENT
+  DAMAGED_WRITTEN_OFF
+  STOCK_TAKE_CORRECTION
+}
+
+enum ShipmentStatus {
+  PENDING
+  LABEL_CREATED
+  COLLECTED
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+}
+
+enum PhotoType {
+  SCOOTER_INBOUND
+  SCOOTER_OUTBOUND
+  REPAIR_EVIDENCE
+  DAMAGE_REPORT
+}
+
+enum ErrorCode {
+  E01
+  E02
+  E03
+  E04
+  E05
+  E06
+  E07
+  E08
+  E09
+  E10
+  PHYSICAL_CRACK
+  PHYSICAL_BATTERY
+  PHYSICAL_WHEEL
+  PHYSICAL_BRAKE
+  PHYSICAL_DISPLAY
+  OTHER
+}
+
+enum PaymentStatus {
+  PAID
+  UNPAID
+  DISPUTED
+  WARRANTY_APPROVED
+}
+
+enum QCResult {
+  PASS
+  FAIL
+  NA
+}
+
+enum CaseType {
+  WARRANTY
+  BGRADE
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  name      String
+  email     String   @unique
+  role      Role     @default(MECHANIC)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Existing
+  repairOrders   RepairOrder[]
+  auditLogs      AuditLog[]
+  stockMovements StockMovement[]
+
+  // New workflow back-relations
+  statusHistoryChanges CaseStatusHistory[] @relation("StatusHistoryChangedBy")
+  caseComments         CaseComment[]       @relation("CommentAuthor")
+  qcResults            QCChecklistResult[] @relation("QCCheckedBy")
+  qcSubmissions        QCSubmission[]      @relation("QCSubmittedBy")
+  repairTimeLogs       RepairTimeLog[]     @relation("RepairTimeMechanic")
+  invoiceUpdates       InvoiceReference[]  @relation("InvoiceUpdatedBy")
+}
+
+model Customer {
+  id           String    @id @default(cuid())
+  name         String
+  email        String?
+  phone        String?
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  postcode     String
+  notes        String?
+  isDeleted    Boolean   @default(false)
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  repairOrders RepairOrder[]
+  scooters     Scooter[]
+
+  @@index([postcode])
+  @@index([email])
+}
+
+model Scooter {
+  id           String        @id @default(cuid())
+  serialNumber String        @unique
+  model        String
+  brand        String
+  colour       String?
+  status       ScooterStatus @default(IN_STOCK)
+  grade        Grade?
+  customerId   String?
+  customer     Customer?     @relation(fields: [customerId], references: [id])
+  purchaseDate DateTime?
+  purchaseCost Decimal?      @db.Decimal(10, 2)
+  salePrice    Decimal?      @db.Decimal(10, 2)
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  repairOrders RepairOrder[]
+
+  @@index([serialNumber])
+  @@index([status])
+  @@index([customerId])
+}
+
+model RepairOrder {
+  id               String       @id @default(cuid())
+  orderNumber      String       @unique
+  scooterId        String
+  scooter          Scooter      @relation(fields: [scooterId], references: [id])
+  customerId       String
+  customer         Customer     @relation(fields: [customerId], references: [id])
+  mechanicId       String?
+  mechanic         User?        @relation(fields: [mechanicId], references: [id])
+  faultDescription String
+  diagnosis        String?
+  resolution       String?
+  status           RepairStatus @default(RECEIVED)
+  priority         Priority     @default(NORMAL)
+  estimatedCost    Decimal?     @db.Decimal(10, 2)
+  finalCost        Decimal?     @db.Decimal(10, 2)
+  internalNotes    String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  closedAt         DateTime?
+
+  // New workflow fields
+  caseType              CaseType  @default(WARRANTY)
+  repairStartedAt       DateTime?
+  repairCompletedAt     DateTime?
+  repairDurationMinutes Int?
+  qcPassed              Boolean?
+  lastQCSubmissionId    String?
+
+  // Existing relations
+  repairParts RepairPart[]
+  shipments   Shipment[]
+
+  // New workflow relations
+  statusHistory CaseStatusHistory[]
+  comments      CaseComment[]
+  qcResults     QCChecklistResult[]
+  qcSubmissions QCSubmission[]
+  errorCodes    ErrorCodeReport[]
+  repairTimeLog RepairTimeLog?
+  invoice       InvoiceReference?
+
+  @@index([status])
+  @@index([customerId])
+  @@index([mechanicId])
+  @@index([createdAt])
+  @@index([orderNumber])
+  @@index([caseType])
+}
+
+model Part {
+  id                String   @id @default(cuid())
+  sku               String   @unique
+  barcode           String?  @unique
+  name              String
+  description       String?
+  stockQty          Int      @default(0)
+  reorderLevel      Int      @default(5)
+  warehouseLocation String?
+  unitCost          Decimal? @db.Decimal(10, 2)
+  supplierName      String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  stockMovements StockMovement[]
+  repairParts    RepairPart[]
+
+  @@index([barcode])
+  @@index([sku])
+}
+
+model StockMovement {
+  id            String         @id @default(cuid())
+  partId        String
+  part          Part           @relation(fields: [partId], references: [id])
+  delta         Int
+  reason        MovementReason
+  referenceId   String?
+  referenceType String?
+  notes         String?
+  performedById String
+  performedBy   User           @relation(fields: [performedById], references: [id])
+  createdAt     DateTime       @default(now())
+
+  @@index([partId])
+  @@index([createdAt])
+  @@index([referenceId])
+}
+
+model RepairPart {
+  id            String      @id @default(cuid())
+  repairOrderId String
+  repairOrder   RepairOrder @relation(fields: [repairOrderId], references: [id])
+  partId        String
+  part          Part        @relation(fields: [partId], references: [id])
+  quantity      Int
+  createdAt     DateTime    @default(now())
+
+  @@unique([repairOrderId, partId])
+}
+
+model Shipment {
+  id             String         @id @default(cuid())
+  repairOrderId  String
+  repairOrder    RepairOrder    @relation(fields: [repairOrderId], references: [id])
+  carrier        String         @default("DPD")
+  trackingNumber String?
+  labelS3Key     String?
+  dpdShipmentId  String?
+  status         ShipmentStatus @default(PENDING)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Photo {
+  id         String    @id @default(cuid())
+  photoType  PhotoType
+  entityType String
+  entityId   String
+  s3Key      String
+  caption    String?
+  takenById  String
+  createdAt  DateTime  @default(now())
+
+  @@index([entityType, entityId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ─── New Workflow Models ──────────────────────────────────────────────────────
+
+model CaseStatusHistory {
+  id          String      @id @default(cuid())
+  caseId      String
+  case        RepairOrder @relation(fields: [caseId], references: [id])
+  fromStatus  String?
+  toStatus    String
+  changedById String
+  changedBy   User        @relation("StatusHistoryChangedBy", fields: [changedById], references: [id])
+  reason      String?
+  createdAt   DateTime    @default(now())
+
+  @@index([caseId])
+  @@index([createdAt])
+}
+
+model CaseComment {
+  id               String      @id @default(cuid())
+  caseId           String
+  case             RepairOrder @relation(fields: [caseId], references: [id])
+  authorId         String
+  author           User        @relation("CommentAuthor", fields: [authorId], references: [id])
+  content          String
+  isCustomerFacing Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+
+  @@index([caseId])
+  @@index([createdAt])
+}
+
+model QCChecklistTemplate {
+  id          String              @id @default(cuid())
+  stepNumber  Int                 @unique
+  stepName    String
+  description String?
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+
+  results QCChecklistResult[]
+}
+
+model QCChecklistResult {
+  id           String              @id @default(cuid())
+  caseId       String
+  case         RepairOrder         @relation(fields: [caseId], references: [id])
+  templateId   String
+  template     QCChecklistTemplate @relation(fields: [templateId], references: [id])
+  submissionId String
+  submission   QCSubmission        @relation(fields: [submissionId], references: [id])
+  result       QCResult
+  notes        String?
+  photoS3Key   String?
+  checkedById  String
+  checkedBy    User                @relation("QCCheckedBy", fields: [checkedById], references: [id])
+  createdAt    DateTime            @default(now())
+
+  @@index([caseId])
+  @@index([submissionId])
+}
+
+model QCSubmission {
+  id            String              @id @default(cuid())
+  caseId        String
+  case          RepairOrder         @relation(fields: [caseId], references: [id])
+  submittedById String
+  submittedBy   User                @relation("QCSubmittedBy", fields: [submittedById], references: [id])
+  overallResult QCResult
+  submittedAt   DateTime            @default(now())
+
+  results QCChecklistResult[]
+
+  @@index([caseId])
+}
+
+model ErrorCodeReport {
+  id               String      @id @default(cuid())
+  caseId           String
+  case             RepairOrder @relation(fields: [caseId], references: [id])
+  errorCode        ErrorCode
+  faultDescription String?
+  createdAt        DateTime    @default(now())
+
+  @@index([caseId])
+}
+
+model RepairTimeLog {
+  id              String      @id @default(cuid())
+  caseId          String      @unique
+  case            RepairOrder @relation(fields: [caseId], references: [id])
+  mechanicId      String
+  mechanic        User        @relation("RepairTimeMechanic", fields: [mechanicId], references: [id])
+  startedAt       DateTime
+  completedAt     DateTime?
+  durationMinutes Int?
+
+  @@index([mechanicId])
+}
+
+model InvoiceReference {
+  id            String        @id @default(cuid())
+  caseId        String        @unique
+  case          RepairOrder   @relation(fields: [caseId], references: [id])
+  invoiceNumber String?
+  paymentStatus PaymentStatus @default(UNPAID)
+  updatedById   String
+  updatedBy     User          @relation("InvoiceUpdatedBy", fields: [updatedById], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([invoiceNumber])
+}
+
